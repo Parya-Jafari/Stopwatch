@@ -135,8 +135,5 @@ const Lap = (props: { index: number; lap: number; onDelete: () => void }) => (
   </div>
 );
 
-const StopwatchTen = () => {
-  return <Stopwatch initialSeconds={0} />;
-};
 
-export default StopwatchTen;
+export default Stopwatch;

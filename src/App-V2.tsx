@@ -1,5 +1,12 @@
 // V2 Modern React, use hooks, proper Type definitions, show hh:mm:ss
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // Update time formatting to show hours as well
 const formattedSeconds = (sec: number) =>
@@ -16,63 +23,65 @@ const Stopwatch = ({ initialSeconds }: StopwatchProps) => {
   // if we expect initialSeconds as a prop to change:
   useEffect(() => {
     setSecondsElapsed(initialSeconds);
-  }, [initialSeconds])
-  
-  const [incrementerId, setIncrementerId] = useState<number | undefined>();
+  }, [initialSeconds]);
+
   const [laps, setLaps] = useState<number[]>([]);
-  const intervalRef = useRef<number | undefined>(undefined);
+  // Use ref instead of state for incrementer
+  const incrementerRef = useRef<number | undefined>(undefined);
   // No need to keep lastClearedIncrementer, just a boolean does the trick
   const [stopped, setStopped] = useState(true);
 
-  
   useEffect(() => {
     if (!stopped) {
-      intervalRef.current = window.setInterval(() => {
+      incrementerRef.current = window.setInterval(() => {
         setSecondsElapsed((prevTime) => prevTime + 1);
       }, 1000);
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
+      if (incrementerRef.current) {
+        clearInterval(incrementerRef.current);
+        incrementerRef.current = undefined;
       }
     }
 
-    // Cleanup interval on component unmount
+    // Cleanup incrementer on component unmount
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (incrementerRef.current) {
+        clearInterval(incrementerRef.current);
       }
     };
   }, [stopped]);
 
-
   const handleStartStopClick = () => {
-    setStopped((prev) => !prev)
+    setStopped((prev) => !prev);
   };
 
-  const handleResetClick = useCallback(() => {
+  const handleResetClick = () => {
     setSecondsElapsed(0);
     setLaps([]);
-  }, [incrementerId]);
+  };
 
   const handleLapClick = useCallback(() => {
     setLaps((prev) => prev.concat([secondsElapsed]));
   }, [secondsElapsed]);
 
-  const handleDeleteClick = (index: number) => {
+  const handleDeleteClick = useCallback((index: number) => {
     setLaps((prev) => {
       const lapsUpdated = [...prev];
       lapsUpdated.splice(index, 1);
       return lapsUpdated;
     });
-  };
+  }, []);
 
   return (
     <div className="stopwatch">
       <h1 className="stopwatch-timer">{formattedSeconds(secondsElapsed)}</h1>
-        <button type="button" className="start-btn" onClick={handleStartStopClick}>
-          {stopped ? "start": "stop"}
-        </button>
+      <button
+        type="button"
+        className="start-btn"
+        onClick={handleStartStopClick}
+      >
+        {stopped ? "start" : "stop"}
+      </button>
       {!stopped ? (
         <button type="button" onClick={handleLapClick}>
           lap
@@ -106,12 +115,19 @@ const Stopwatch = ({ initialSeconds }: StopwatchProps) => {
   );
 };
 
-const Lap = (props: { index: number; lap: number; onDelete: () => void }) => (
-  <div key={props.index} className="stopwatch-lap">
-    <strong>{props.index}</strong>/ {formattedSeconds(props.lap)}{" "}
-    <button onClick={props.onDelete}> X </button>
-  </div>
-);
-
+// Memoize Lap to avoid rerenders when props don't change
+const Lap = memo(function Lap(props: {
+  index: number;
+  lap: number;
+  onDelete: () => void;
+}) {
+  return (
+    <div key={props.index} className="stopwatch-lap">
+      <strong>{props.index}</strong>
+      {`/ ${formattedSeconds(props.lap)} `}
+      <button onClick={props.onDelete}> X </button>
+    </div>
+  );
+});
 
 export default Stopwatch;
